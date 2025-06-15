@@ -50,7 +50,7 @@
             <div class="flex flex-col space-y-6">
                 <div>
                     <label for="raw-notes" class="block text-lg font-semibold mb-2 text-gray-700">1. 초안 메모 입력</label>
-                    <textarea id="raw-notes" rows="10" class="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200" placeholder="여기에 링크드인 게시물에 대한 아이디어나 초안을 자유롭게 입력하세요. 글의 길이, 형식에 구애받지 않아도 됩니다."></textarea>
+                    <textarea id="raw-notes" rows="8" class="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200" placeholder="여기에 링크드인 게시물에 대한 아이디어나 초안을 자유롭게 입력하세요. 글의 길이, 형식에 구애받지 않아도 됩니다."></textarea>
                 </div>
                 <div>
                     <label for="tone-select" class="block text-lg font-semibold mb-2 text-gray-700">2. 어조 선택</label>
@@ -73,7 +73,11 @@
                     </select>
                 </div>
                 <div>
-                    <label for="api-key-input" class="block text-lg font-semibold mb-2 text-gray-700">4. API 키 입력</label>
+                    <label for="custom-prompt" class="block text-lg font-semibold mb-2 text-gray-700">4. 추가 요청사항 (선택)</label>
+                    <textarea id="custom-prompt" rows="4" class="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200" placeholder="예: 3문단으로 작성, 이모지 사용 금지"></textarea>
+                </div>
+                <div>
+                    <label for="api-key-input" class="block text-lg font-semibold mb-2 text-gray-700">5. API 키 입력</label>
                     <input type="password" id="api-key-input" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200" placeholder="AI API 키를 여기에 입력하세요.">
                 </div>
                 <button id="generate-btn" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-300 transition duration-300 ease-in-out transform hover:-translate-y-0.5">
@@ -91,7 +95,7 @@
                     <div id="loading-spinner" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg hidden">
                         <div class="lds-dual-ring"></div>
                     </div>
-                    <div id="output" class="w-full h-full p-4 border border-gray-300 rounded-lg bg-gray-50 whitespace-pre-wrap min-h-[300px] md:min-h-full">결과가 여기에 표시됩니다.</div>
+                    <div id="output" class="w-full h-full p-4 border border-gray-300 rounded-lg bg-gray-50 whitespace-pre-wrap min-h-[450px] md:min-h-full">결과가 여기에 표시됩니다.</div>
                 </div>
                 <div id="message-box" class="mt-2 text-center text-sm font-medium"></div>
             </div>
@@ -105,6 +109,7 @@
     const rawNotesInput = document.getElementById('raw-notes');
     const toneSelect = document.getElementById('tone-select');
     const structureSelect = document.getElementById('structure-select');
+    const customPromptInput = document.getElementById('custom-prompt');
     const apiKeyInput = document.getElementById('api-key-input');
     const outputDiv = document.getElementById('output');
     const copyBtn = document.getElementById('copy-btn');
@@ -124,6 +129,7 @@
         const notes = rawNotesInput.value.trim();
         const tone = toneSelect.value;
         const structure = structureSelect.value;
+        const customPrompt = customPromptInput.value.trim();
         const apiKey = apiKeyInput.value.trim();
 
         if (!notes) {
@@ -147,7 +153,7 @@
             // Construct the prompt for the AI
             const prompt = `
                     당신은 소셜 미디어, 특히 링크드인 콘텐츠 제작 전문가입니다.
-                    아래의 '초안 메모'를 사용하여, 지정된 '어조'와 '구조'에 맞는 매력적인 링크드인 게시물을 한국어로 작성해주세요.
+                    아래의 '초안 메모'를 사용하여, 지정된 '어조', '구조', 그리고 '추가 요청사항'에 맞는 매력적인 링크드인 게시물을 한국어로 작성해주세요.
 
                     지침:
                     1. 첫 문장은 사람들의 시선을 사로잡을 수 있도록 강력한 후킹 문장으로 시작하세요.
@@ -164,6 +170,7 @@
                     ---
                     구조: ${structure}
                     ---
+                    ${customPrompt ? `추가 요청사항:\n${customPrompt}\n---` : ''}
 
                     완성된 링크드인 게시물:
                 `;
