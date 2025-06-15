@@ -50,7 +50,7 @@
             <div class="flex flex-col space-y-6">
                 <div>
                     <label for="raw-notes" class="block text-lg font-semibold mb-2 text-gray-700">1. 초안 메모 입력</label>
-                    <textarea id="raw-notes" rows="12" class="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200" placeholder="여기에 링크드인 게시물에 대한 아이디어나 초안을 자유롭게 입력하세요. 글의 길이, 형식에 구애받지 않아도 됩니다."></textarea>
+                    <textarea id="raw-notes" rows="10" class="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200" placeholder="여기에 링크드인 게시물에 대한 아이디어나 초안을 자유롭게 입력하세요. 글의 길이, 형식에 구애받지 않아도 됩니다."></textarea>
                 </div>
                 <div>
                     <label for="tone-select" class="block text-lg font-semibold mb-2 text-gray-700">2. 어조 선택</label>
@@ -71,6 +71,10 @@
                         <option value="간결한 팁 (Quick Tip)">간결한 팁</option>
                         <option value="성과 공유 (Achievement Showcase)">성과 공유</option>
                     </select>
+                </div>
+                <div>
+                    <label for="api-key-input" class="block text-lg font-semibold mb-2 text-gray-700">4. API 키 입력</label>
+                    <input type="password" id="api-key-input" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200" placeholder="AI API 키를 여기에 입력하세요.">
                 </div>
                 <button id="generate-btn" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-300 transition duration-300 ease-in-out transform hover:-translate-y-0.5">
                     게시물 생성하기 ✨
@@ -101,6 +105,7 @@
     const rawNotesInput = document.getElementById('raw-notes');
     const toneSelect = document.getElementById('tone-select');
     const structureSelect = document.getElementById('structure-select');
+    const apiKeyInput = document.getElementById('api-key-input');
     const outputDiv = document.getElementById('output');
     const copyBtn = document.getElementById('copy-btn');
     const loadingSpinner = document.getElementById('loading-spinner');
@@ -119,10 +124,16 @@
         const notes = rawNotesInput.value.trim();
         const tone = toneSelect.value;
         const structure = structureSelect.value;
+        const apiKey = apiKeyInput.value.trim();
 
         if (!notes) {
             showMessage('초안 메모를 입력해주세요.', 3000);
             rawNotesInput.focus();
+            return;
+        }
+        if (!apiKey) {
+            showMessage('API 키를 입력해주세요.', 3000);
+            apiKeyInput.focus();
             return;
         }
 
@@ -142,6 +153,8 @@
                     1. 첫 문장은 사람들의 시선을 사로잡을 수 있도록 강력한 후킹 문장으로 시작하세요.
                     2. 읽기 쉽게 짧은 문단과 이모지를 적절히 사용해주세요. (2~4개 정도)
                     3. 글의 마지막에는 내용과 관련된 해시태그 3~5개를 추가해주세요.
+                    4. 강조를 위한 별표(**)나 설명을 위한 콜론(:) 같은 AI가 작성할 때 사용되는 특수문자는 제거하세요.
+                    5. 사례를 언급할 경우, 'Shopify 사례'처럼 축약하는 것보다 'Shopify의 Otto’s Grotto 사례'처럼 구체적인 명칭을 포함하여 정보의 신뢰도를 높여주세요.
 
                     ---
                     초안 메모:
@@ -158,7 +171,7 @@
             let chatHistory = [];
             chatHistory.push({ role: "user", parts: [{ text: prompt }] });
             const payload = { contents: chatHistory };
-            const apiKey = "" // If you want to use models other than gemini-2.0-flash or imagen-3.0-generate-002, provide an API key here. Otherwise, leave this as-is.
+            //const apiKey = "" // If you want to use models other than gemini-2.0-flash or imagen-3.0-generate-002, provide an API key here. Otherwise, leave this as-is.
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
             const response = await fetch(apiUrl, {
@@ -168,7 +181,8 @@
             });
 
             if (!response.ok) {
-                throw new Error(`API 요청 오류: ${response.status} ${response.statusText}`);
+                const errorData = await response.json();
+                throw new Error(`API 요청 오류: ${response.status} ${response.statusText}. ${errorData?.error?.message || ''}`);
             }
 
             const result = await response.json();
@@ -178,12 +192,14 @@
                 result.candidates[0].content.parts.length > 0) {
                 const generatedText = result.candidates[0].content.parts[0].text;
                 outputDiv.textContent = generatedText.trim();
+            } else if (result.candidates && result.candidates[0].finishReason === 'SAFETY') {
+                    throw new Error('콘텐츠가 안전 정책에 의해 차단되었습니다.');
             } else {
                 throw new Error('API 응답에서 유효한 콘텐츠를 찾을 수 없습니다.');
             }
         } catch (error) {
             console.error("Error:", error);
-            outputDiv.textContent = `오류가 발생했습니다: ${error.message}. 잠시 후 다시 시도해주세요.`;
+            outputDiv.textContent = `오류가 발생했습니다: ${error.message}. API 키와 입력 내용을 확인 후 다시 시도해주세요.`;
             showMessage('생성 중 오류가 발생했습니다.', 5000);
         } finally {
             // Hide loading spinner and enable button
